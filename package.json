@@ -1,0 +1,12 @@
+{
+ "name": "longitude",
+ "version": "0.1.0",
+ "dependencies": {
+     "express": "",
+     "url": "",
+     "path": "",
+     "passport": "",
+     "passport-openid": "",
+     "mongodb": ""
+   }
+}
