@@ -84,38 +84,72 @@
   app.use(express.static(__dirname + '/store'))
   app.use(express.errorHandler({ dumpExceptions: true, showStack: true }))
 
+  app.get('/extensions', /*ensureAuthenticated,*/ function(req, res) {
+     res.send([])
+  })
+
   app.get('*', /*ensureAuthenticated,*/ function(req, res) {
       host = req.headers.host
-      var parsed = url.parse(req.params[0])
+      var parsed = url.parse(req.url,true)
       var p = parsed.pathname
       p = path.normalize(p)
-      var collname = path.dirname(p)
-      var basename = path.basename(p)
-      console.log("basename: "+basename)
-      console.log("collname: "+collname)
-      if (p.charAt(p.length-1) == '/') {
-         collname = p.slice(0,-1)
-         basename = ""
+      var sp = p.split('/')
+      var basename = sp[sp.length-1]
+      sp.pop()
+      var collname = sp.join('/') 
+      var query = parsed.query
+      console.log("parsed: "+JSON.stringify(parsed))
+      console.log("query: "+JSON.stringify(query))
+      var incl = query.attributes
+      var rv = {}
+      if (incl) {
+         var inames = incl.split(',')
+         delete(query.attributes)
+         for (var i = 0; i < inames.length; ++i)
+            rv[inames[i]] = 1
       }
+      console.log("rv: "+JSON.stringify(rv)) 
+//      console.log("basename: "+basename)
+//      console.log("collname: "+collname)
       var ifnonmatch = req.header("If-None-Match")
 
 // fetch resource from db
       db.collection(collname, function (err, collection) {
-          console.log("db.collection yields collection :"+collection)
-          console.log("err is::"+err)
           if (err) { 
              console.warn(err.message)
              res.send(err.message, 500)
              return
-          } 
-          if (basename == '') {
-             res.send('not found', 404)
-          } else {
+          }
+
+      if (basename == '') {
+         var cursor = collection.find(query, rv)
+         res.header('Content-Type', "application/json; charset=utf-8")
+         res.write('[')
+         var comma = false
+         cursor.each(function(err, entry) {
+                           if (err)  {
+                              console.warn(err.message)
+                              res.send('Error', 500)
+                           } else {
+                              console.log("next entry")
+                              if (entry) {
+                                 if (comma) res.write(",")
+                                 comma = true
+                                 var id = entry._id
+                                 delete entry._id
+                                 entry.DEN = id
+                                 res.write(JSON.stringify(entry))
+                              } else {
+                                 res.write(']')
+                                 res.end()
+                              }   
+                           }
+                          })
+      } else {
              var id = collname+'/'+basename
              console.log("id is: "+id)
-             console.log("collection is: "+collection)
-             var cursor = collection.find({ _id: id })
-             console.log("cursor "+cursor)
+             query._id = id
+             var cursor = collection.find(query,rv)
              cursor.nextObject(function(err, entry) {
                            if (err)  {
                               console.warn(err.message)
@@ -131,16 +165,17 @@
                               }   
                            }
                           })
-          }
+      }
+
       })
   })
 
   app.put('*', /* ensureAuthenticated,*/ function(req, res) {
-      console.log("PUT on "+req.params[0])
+      console.log("PUT on "+req.url)
       host = req.headers.host
       var contentType = req.header('Content-Type').split(';')[0]
       console.log("Content-Type: "+contentType)
-      var parsed = url.parse(req.params[0])
+      var parsed = url.parse(req.url)
       var p = parsed.pathname
       p = path.normalize(p)
       var collname = path.dirname(p)
@@ -211,7 +246,7 @@
   })
 
   app.delete('*', function(req, res) {
-      var parsed = url.parse(req.params[0])
+      var parsed = url.parse(req.url)
       var p = parsed.pathname
       p = path.normalize(p)
       var collname = path.dirname(p)
