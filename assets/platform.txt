@@ -1,0 +1,16 @@
+The fi-ware Business Framework provides a platform architecture, which consists of the core enablers needed for doing [[emph +]] business with services.
+
+The [[emph +]] Repository Enabler is used to publish service descriptions and related documentation.
+
+ The [[emph +]] Registry Enabler allows to register runtime information, which is used by other components of the platform for discovery and using them.
+
+The [[emph +]] marketplace is a central component, which enables offering and demand matching of services accross the various business partners. The marketplace comprises all offerings from various stores.
+
+[[emph +]] Revenue Sharing services can calculate cost and revenue streams depending on collaborative business models.
+
+[[emph +]] Service composition and mashup enablers are useful to conduct complex services and applications including basic services from multiple service providers.
+
+ The [[emph +]] mediator can be used to connect services despite different protocols, data
+formats and processes.
+
+This small course is about the fi-ware Registry, which is used by nearly all other components in order to retrieve information about the platform instances.

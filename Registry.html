@@ -1,0 +1,224 @@
+<!doctype html>
+<html lang="en">
+
+	<head>
+		<meta charset="utf-8">
+
+		<title>FI-WARE - Embedded Media</title>
+
+		<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+
+		<link rel="stylesheet" href="css/reveal.min.css">
+		<link rel="stylesheet" href="css/theme/default.css" id="theme">
+
+		<!-- For syntax highlighting -->
+		<link rel="stylesheet" href="lib/css/zenburn.css">
+
+	</head>
+
+	<body>
+
+		<div class="reveal">
+
+			<div class="slides">
+
+				<section>
+					<h1>FI-WARE Registry Enabler</h1>
+                                        <h2>Application and Services Framework</h2>
+                                        <p>Torsten Leidig, SAP AG</p>
+				</section>
+
+				<section>
+					<h2>Platform for Service Business</h2>
+                                        <p>
+                                           <img src="assets/registry.png">
+                                           <audio src="assets/platform.mp3" controls></audio>
+                                        </p>
+				</section>
+
+				<section>
+					<h2>Rationale</h2>
+                                        <ul>
+                                           <li>Used to store information on instance level (entries describing instances and their parameters)</li>
+                                           <li>Used to store information on  instances necessary for run-time execution</li>
+                                           <li>Usually volatile information</li>
+                                           <li>Somehow equivalent to directory services (e.g. LDAP)</li>
+                                           <li>Is just a protocol specification, which is agnostic according the implementation (database, distribution)</li>
+                                           <li>Our implementation is based on MongoDB</li>
+                                        </ul>
+				</section>
+
+
+				<section>
+					<h2>Target Usage</h2>
+<p>The Registry acts as a universal directory of information used for the maintenance, administration, deployment and retrieval of services. Existing (running) service endpoints as well as information to create an actual service instance and endpoint are registered. This GE will be used by potentially all GE in the Apps Chapter in order to build a common database of run-time configuration options and properties. It can also be used by GE of other chapters, such as the Cloud, Security, Data or IoT to announce their instance specific information to the rest of the platform components. In a FI-WARE instance there could be multiple instances of the Registry for different purposes and usage domains, which are accessed uniformly according the Repository RESTful interface specification.</p>
+				</section>
+
+				<section>
+					<h2>Data Model</h2>
+<p>The basic data elements of the registry are the Registry Entry containing the actual information and the Registry Key to access the data entries in the Registry. A registry entry can be a single atomic piece of data or a structured data such as a record of named properties (name/value pairs). The exact data model and its encoding will be defined in the interface specification. The schema (the exact names of properties and their value encoding) is the matter of the application developer or the community of developers in a respective application domain.</p>
+<p>The Registry Key is used for accessing individual entries or a collection of entries is often organized as path into an underlying registry internal organization such as a tree.</p>
+				</section>
+
+				<section>
+					<h2>Register key</h2>
+                                        <p>
+                                           The Registry Key is used to identified by directory path<p>
+                                        <p>e.g. /provider/transport/<p>
+
+                                </section>
+
+				<section>
+                                        <h2>Register entry</h2>
+                                        
+                                        <ul>
+                                           <li>Indentified by URI, e.g. /provider/transport/dhl</li>
+                                           <li>Is represented by a set of key/value pairs </li>
+                                        </ul>
+                                </section>
+
+				<section>
+                                        <h2>Operations</h2>
+
+                                        <ul>
+                                           <li>Read, write, delete, list</li>
+                                           <li>Filtering and attribute selection via query parameters</li>
+                                        </ul>
+				</section>
+
+				<section>
+					<h2>Reference Architecture</h2>
+                                        <p>
+                                           <img src="assets/600px-Registry-architecture.png">
+                                        </p>
+				</section>
+
+				<section>
+					<h2>Main Interactions</h2>
+                                        <p>
+                                           <img src="assets/600px-Registry-sequence.png">
+                                        </p>
+				</section>
+
+				<section>
+					<h2>Register and Deregister Entries</h2>
+                                        <p>The <b>Register Entry</b> operation is used to write or update a register information entry into the Registry. Two parameters are essentially needed:</p>
+<ul>
+<li><em>key</em> - The Registry Key of the entry to be registered. A key can exhibit an organizational structure such as a tree. The Registry Key is usually given by the client and is chosen according to a published naming scheme.</li>
+<li><em>entry</em> - The Register Entry to be registered. The entry is usually a list of name/value pairs.</li>
+</ul>
+<p>A registry key is returned.</p>
+<p>For the <b>Deregister Entry</b> operation only the Registry Key of the Registry Entry is needed:</p>
+<ul>
+<li><em>key</em> - Registry Key of the entry to be de-registered</li>
+</ul>      
+				</section>
+
+				<section>
+					<h2>Retrieving Entries</h2>
+<p>It must be possible to directly retrieve a Registry Entry using a unique Key using the Get Registry Entry operation. In this case one parameter is sufficient:</p>
+<ul>
+<li><em>key</em> - Registry Key of the entry to be retrieved</li>
+</ul>
+<p></p>
+<p>
+The Query Registry Entries operation allows the retrieval of Registry Entries matching a filter expression:</p>
+<ul>
+<li><em>filter</em> - A filter expression to select entries to be retrieved.</li>
+</ul>
+				</section>
+
+				<section>
+					<h2>Registry Open RESTful API Specification</h2>
+<p>The Registry API is a RESTful, resource-oriented API accessed via HTTP that uses various representations for information interchange. The Registry Enabler is used to store information on service instances necessary for run-time execution.</p>
+				</section>
+
+				<section>
+					<h2>Representation Format</h2>
+<p>The Registry API supports XML/RDF, Turtle, JSON, Atom HTML for delivering information for registry entries. The request format is specified using the Content-Type header and is required for operations that have a request body. The response format can be specified in requests using the Accept header. Note that it is possible for a response to be serialized using a format different from the request.</p>
+<ul>
+<li><em>text/plain</em> - A linefeed separated list of elements for easy mashup and scripting.</li>
+<li><em>text/html</em> - An human-readable HTML rendering of the results of the operation as output format.</li>
+<li><em>application/json</em> - A JSON representation of the input and output for mashups or JavaScript-based Web Apps</li>
+<li><em>application/rdf+xml</em> - A RDF description of the input and output.</li>
+</ul>
+
+<p>In a concrete implementation of this GE other formats like RSS or Atom may also be possible.</p>
+				</section>
+
+				<section>
+					<h2>Resource Identification</h2>
+<p>The Distinguished Entry Name (DEN) is used to unambiguously identify registry entries. In analogy to the LDAP protocol (RFC 4510, 4512, 4514, 4516, 4517) we assume distinguished entry names can be expressed in a hierarchical way.</p>
+<p>Examples:</p>
+<p><samp style="font-family:monospace">/c=de/o=University%20of%20Michigan</samp> - is a DEN similar to an LDAP DN<p>
+<p><samp style="font-family:monospace">/de/University%20of%20Michigan</samp> - is an alternative representation of the DEN assuming that there is a default hierarchy<p>
+				</section>
+
+				<section>
+					<h2>Web Citizen</h2>
+
+<p>The registry is relying on Web principles:</p>
+<ul>
+<li>URI to identify resources</li>
+<li>consistent URI structure based on REST style protocol</li>
+<li>HTTP content negotiation to allow the client to choose the appropriate data format supporting HTML, RDF, XML, RSS, JSON, Turtle, ...</li>
+<li>Human readable output format using HTML rendering ('text/html' accept header) including hyperlinked representation</li>
+<li>Use of HTTP response codes including ETags (proper caching)</li>
+<li>Linked Data enablement supporting RDF input and output types</li>
+</ul>
+				</section>
+
+				<section>
+					<h2>Example: Retrieving Registry Information</h2>
+<p><samp>GET /de/service/stores/?attributes=Name,serviceResource,endpoint</samp>
+<br>
+<samp>Accept: application/json</samp>
+<p>
+<p>returns</p>
+<pre>[ { DEN: "/de/service/stores/store1",
+    Name: "Store1 Name",
+    service: "http://fiware.org/usdl/servicestorexyz",
+    endpoint: "http://fiware-platform.org/service/store1/instance4711"
+  },
+  ...
+]
+</pre>
+				</section>
+
+				<section>
+					<h2>API Specification</h2>
+<small>https://forge.fi-ware.eu/plugins/mediawiki/wiki/fiware/index.php/Registry_Open_RESTful_API_Specification</small>
+				</section>
+
+
+			</div>
+
+		</div>
+
+		<script src="lib/js/head.min.js"></script>
+		<script src="js/reveal.min.js"></script>
+
+		<script>
+
+			Reveal.initialize({
+				controls: true,
+				progress: true,
+				history: true,
+				center: true,
+				theme: Reveal.getQueryHash().theme, // available themes are in /css/theme
+				transition: Reveal.getQueryHash().transition || 'default', // default/cube/page/concave/zoom/linear/fade/none
+				dependencies: [
+					{ src: 'lib/js/classList.js', condition: function() { return !document.body.classList; } },
+					{ src: 'plugin/markdown/marked.js', condition: function() { return !!document.querySelector( '[data-markdown]' ); } },
+					{ src: 'plugin/markdown/markdown.js', condition: function() { return !!document.querySelector( '[data-markdown]' ); } },
+					{ src: 'plugin/highlight/highlight.js', async: true, callback: function() { hljs.initHighlightingOnLoad(); } },
+					{ src: 'plugin/zoom-js/zoom.js', async: true, condition: function() { return !!document.body.classList; } },
+					{ src: 'plugin/notes/notes.js', async: true, condition: function() { return !!document.body.classList; } }
+				]
+                              })
+
+		</script>
+
+	</body>
+</html>
+
