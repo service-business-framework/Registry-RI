@@ -1,39 +1,59 @@
 (function() {
   var hostname = (process.env.VMC_APP_HOST || "deqkalvm272.qkal.sap.corp")
-  var port = (process.env.VMC_APP_PORT || "5000")
+  var port = (process.env.VMC_APP_PORT || "443")
   var host = hostname+":"+port
+  var fs = require('fs')
   var protocol = 'http:'
   var url = require('url')
+  var https = require('https')
   var path = require('path')
   var express = require('express')
   var passport = require('passport')
-  var OpenIDStrategy = require('passport-openid').Strategy
   require('./Math.uuid')
 
-/*
-  passport.use(new OpenIDStrategy({
-      returnURL: protocol+'//'+host+'/auth/openid/return',
-      realm: protocol+'//'+host
-    },
-    function(identifier, done) {
-      console.log('passport identifier: '+JSON.stringify(identifier))
-      return done(null, {identifier: identifier})
-    }
-  ))
+  var BearerStrategy = require('passport-http-bearer').Strategy
 
-  passport.serializeUser(function(user, done) {
-    done(null, user.identifier);
-  })
-  
-  passport.deserializeUser(function(identifier, done) {
-    done(null, { identifier: identifier });
-  })
-
-  function ensureAuthenticated(req, res, next) {
-    if (req.isAuthenticated()) { return next(); }
-    res.redirect('/login.html')
+  function findByToken(token, fn) {
+     console.log('findByToken')
+     var url = 'https://account.lab.fi-ware.eu/user?access_token='
+             + token
+     https.get(url, function (res) {
+                 console.log('token validation request callback')
+                 res.on('data', function (d) {
+                   console.log('token validation request data')
+                   fn(null, 'authenticated') 
+                 })
+               }).on('error', function (e) {
+                console.error(e)
+                fn(null, null)
+               })
   }
-*/
+
+// Use the BearerStrategy within Passport.
+//   Strategies in Passport require a `validate` function, which accept
+//   credentials (in this case, a token), and invoke a callback with a user
+//   object.
+passport.use(new BearerStrategy({ },
+  function(token, done) {
+    console.log(token)
+    // asynchronous validation, for effect...
+    process.nextTick(function () {
+      
+      // Find the user by token.  If there is no user with the given token, set
+      // the user to `false` to indicate failure.  Otherwise, return the
+      // authenticated `user`.  Note that in a production-ready application, one
+      // would want to validate the token for authenticity.
+      console.log('try findByToken')
+      findByToken(token, function(err, user) {
+        console.log(user)
+        if (err) { return done(err) }
+        if (!user) { return done(null, false) }
+        return done(null, user)
+      })
+    })
+  }
+))
+
 
   var mongodb = require('mongodb')
   var mongo
@@ -73,22 +93,36 @@
                              })
 
   app = express()
-  app.use(express.cookieParser());
+
+  var options = {
+    key: fs.readFileSync('server.key'),
+    cert: fs.readFileSync('server.crt'),
+    ca: fs.readFileSync('ca.crt')
+  }
+
+  server = https.createServer(options, app)
+
+app.configure(function() {
   app.use(express.logger({ format: ':method :url :status :response-time' }))
-  app.use(express.favicon(__dirname + '/store/favicon.ico'))
   app.use(express.query())
   app.use(express.bodyParser())  
-  app.use(express.session({ secret: 'keyboard cat' }))
+//  app.use(express.session({ secret: 'keyboard cat' }))
   app.use(passport.initialize())
-  app.use(passport.session())
+//  app.use(passport.session())
+  app.use(app.router)
   app.use(express.static(__dirname + '/store'))
   app.use(express.errorHandler({ dumpExceptions: true, showStack: true }))
+})
 
-  app.get('/extensions', /*ensureAuthenticated,*/ function(req, res) {
-     res.send([])
-  })
+  app.get('/extensions',
+   passport.authenticate('bearer', { session: false }),
+   function(req, res) {
+             res.send([])
+   })
 
-  app.get('*', /*ensureAuthenticated,*/ function(req, res) {
+  app.get('*',
+   passport.authenticate('bearer', { session: false }),
+   function(req, res) {
       host = req.headers.host
       var parsed = url.parse(req.url,true)
       var p = parsed.pathname
@@ -170,7 +204,9 @@
       })
   })
 
-  app.put('*', /* ensureAuthenticated,*/ function(req, res) {
+  app.put('*',
+   passport.authenticate('bearer', { session: false }),
+   function(req, res) {
       console.log("PUT on "+req.url)
       host = req.headers.host
       var contentType = req.header('Content-Type').split(';')[0]
@@ -245,7 +281,9 @@
       }
   })
 
-  app.delete('*', function(req, res) {
+  app.delete('*',
+   passport.authenticate('bearer', { session: false }),
+   function(req, res) {
       var parsed = url.parse(req.url)
       var p = parsed.pathname
       p = path.normalize(p)
