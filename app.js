@@ -1,10 +1,15 @@
 (function() {
   var hostname = (process.env.VMC_APP_HOST || "deqkalvm272.qkal.sap.corp")
-  var port = (process.env.VMC_APP_PORT || "443")
+  var proxy = process.env.http_proxy
+  var port = (process.env.VMC_APP_PORT || "5000")
   var host = hostname+":"+port
+  var IDServerHostname = "account.lab.fi-ware.eu"
+  var IDServerPort = 443
+
   var fs = require('fs')
   var protocol = 'http:'
   var url = require('url')
+  var http = require('http')
   var https = require('https')
   var path = require('path')
   var express = require('express')
@@ -14,19 +19,50 @@
   var BearerStrategy = require('passport-http-bearer').Strategy
 
   function findByToken(token, fn) {
-     console.log('findByToken')
-     var url = 'https://account.lab.fi-ware.eu/user?access_token='
-             + token
-     https.get(url, function (res) {
+     var path = "/user?access_token="+token
+     var url = 'https://'+IDServerHostname+path
+     var options, protocol
+     if (proxy) {
+        options = {
+           host: "proxy.wdf.sap.corp",
+           port: 8080,
+           path: url,
+           headers: {
+             Host: "account.lab.fi-ware.eu"
+           }
+         }
+        protocol = http
+        console.log("Use proxy server: "+JSON.stringify(options))
+     } else {
+        options = {
+           host: IDServerHostname,
+           port: IDServerPort,
+           path: path
+        }
+        protocol = https
+        console.log("Direct connection: "+JSON.stringify(options))
+     }
+       
+     protocol.get(options, function (res) {
                  console.log('token validation request callback')
-                 res.on('data', function (d) {
-                   console.log('token validation request data')
-                   fn(null, 'authenticated') 
+                 var data = ""
+                 res.setEncoding('utf8');
+                 res.on('data', function(chunk) {
+                     data += chunk;
+                   }).on('end', function(chunk) {
+                   console.log(data)
+                   try {
+                      var info = JSON.parse(data)
+                      console.log(info)
+                      fn(null, info.nickName) 
+                   } catch (e) {
+                      fn(e, null)
+                   }
+                 }).on('error', function (e) {
+                    console.error(e)
+                    fn(e, null)
                  })
-               }).on('error', function (e) {
-                console.error(e)
-                fn(null, null)
-               })
+     })
   }
 
 // Use the BearerStrategy within Passport.
@@ -43,11 +79,9 @@ passport.use(new BearerStrategy({ },
       // the user to `false` to indicate failure.  Otherwise, return the
       // authenticated `user`.  Note that in a production-ready application, one
       // would want to validate the token for authenticity.
-      console.log('try findByToken')
       findByToken(token, function(err, user) {
-        console.log(user)
         if (err) { return done(err) }
-        if (!user) { return done(null, false) }
+        if (!user) { return done(null, null) }
         return done(null, user)
       })
     })
@@ -100,7 +134,7 @@ passport.use(new BearerStrategy({ },
     ca: fs.readFileSync('ca.crt')
   }
 
-  server = https.createServer(options, app)
+//  server = http.createServer(options, app)
 
 app.configure(function() {
   app.use(express.logger({ format: ':method :url :status :response-time' }))
@@ -110,8 +144,8 @@ app.configure(function() {
   app.use(passport.initialize())
 //  app.use(passport.session())
   app.use(app.router)
-  app.use(express.static(__dirname + '/store'))
-  app.use(express.errorHandler({ dumpExceptions: true, showStack: true }))
+//  app.use(express.static(__dirname + '/store'))
+//  app.use(express.errorHandler({ dumpExceptions: true, showStack: true }))
 })
 
   app.get('/extensions',
