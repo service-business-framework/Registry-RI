@@ -31,7 +31,7 @@
              Host: "account.lab.fi-ware.eu"
            }
          }
-        protocol = http
+        protocol = https
         console.log("Use proxy server: "+JSON.stringify(options))
      } else {
         options = {
@@ -127,13 +127,13 @@ passport.use(new BearerStrategy({ },
                              })
 
   app = express()
-
+/* if server key is available
   var options = {
     key: fs.readFileSync('server.key'),
     cert: fs.readFileSync('server.crt'),
     ca: fs.readFileSync('ca.crt')
   }
-
+*/
 //  server = http.createServer(options, app)
 
 app.configure(function() {
