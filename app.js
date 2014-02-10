@@ -23,9 +23,10 @@
      var url = 'https://'+IDServerHostname+path
      var options, protocol
      if (proxy) {
+        var url = url.parse(proxy)
         options = {
-           host: "proxy.wdf.sap.corp",
-           port: 8080,
+           host: url.host,
+           port: url.port,
            path: url,
            headers: {
              Host: "account.lab.fi-ware.eu"
