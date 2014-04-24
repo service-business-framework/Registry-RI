@@ -3,12 +3,12 @@
   var proxy = process.env.http_proxy
   var port = (process.env.VMC_APP_PORT || "5000")
   var host = hostname+":"+port
-  var IDServerHostname = "account.lab.fi-ware.eu"
-  var IDServerPort = 443
+  var IDServerHostname = (process.env.ID_SERV_HOST || false ) 
+  var IDServerPort = (process.env.ID_SERV_PORT || 443 )
 
   var fs = require('fs')
   var protocol = 'http:'
-  var url = require('url')
+  var URL = require('url')
   var http = require('http')
   var https = require('https')
   var path = require('path')
@@ -23,7 +23,7 @@
      var url = 'https://'+IDServerHostname+path
      var options, protocol
      if (proxy) {
-        var url = url.parse(proxy)
+        var url = URL.parse(proxy)
         options = {
            host: url.host,
            port: url.port,
@@ -43,8 +43,17 @@
         protocol = https
         console.log("Direct connection: "+JSON.stringify(options))
      }
-       
-     protocol.get(options, function (res) {
+     if (!IDServerHostname) {
+        console.log("no IDServerHostname")
+        for(var i=0; i<users.length; i++) {
+            if (users[i].token == token) {
+               fn(null, users[i].username) 
+               return
+            }
+        }
+        fn("unautorized", null)
+     } else {  
+        protocol.get(options, function (res) {
                  console.log('token validation request callback')
                  var data = ""
                  res.setEncoding('utf8');
@@ -63,8 +72,14 @@
                     console.error(e)
                     fn(e, null)
                  })
-     })
+        })
+     }
   }
+
+users = [
+    { id: 1, username: 'bob', token: '123456789', email: 'bob@example.com' }
+  , { id: 2, username: 'joe', token: 'abcdefghi', email: 'joe@example.com' }
+]
 
 // Use the BearerStrategy within Passport.
 //   Strategies in Passport require a `validate` function, which accept
@@ -128,6 +143,7 @@ passport.use(new BearerStrategy({ },
                              })
 
   app = express()
+
 /* if server key is available
   var options = {
     key: fs.readFileSync('server.key'),
@@ -137,17 +153,11 @@ passport.use(new BearerStrategy({ },
 */
 //  server = http.createServer(options, app)
 
-app.configure(function() {
   app.use(express.logger({ format: ':method :url :status :response-time' }))
   app.use(express.query())
   app.use(express.bodyParser())  
-//  app.use(express.session({ secret: 'keyboard cat' }))
   app.use(passport.initialize())
-//  app.use(passport.session())
   app.use(app.router)
-//  app.use(express.static(__dirname + '/store'))
-//  app.use(express.errorHandler({ dumpExceptions: true, showStack: true }))
-})
 
   app.get('/extensions',
    passport.authenticate('bearer', { session: false }),
@@ -159,7 +169,7 @@ app.configure(function() {
    passport.authenticate('bearer', { session: false }),
    function(req, res) {
       host = req.headers.host
-      var parsed = url.parse(req.url,true)
+      var parsed = URL.parse(req.url,true)
       var p = parsed.pathname
       p = path.normalize(p)
       var sp = p.split('/')
@@ -246,7 +256,7 @@ app.configure(function() {
       host = req.headers.host
       var contentType = req.header('Content-Type').split(';')[0]
       console.log("Content-Type: "+contentType)
-      var parsed = url.parse(req.url)
+      var parsed = URL.parse(req.url)
       var p = parsed.pathname
       p = path.normalize(p)
       var collname = path.dirname(p)
@@ -319,7 +329,7 @@ app.configure(function() {
   app.delete('*',
    passport.authenticate('bearer', { session: false }),
    function(req, res) {
-      var parsed = url.parse(req.url)
+      var parsed = URL.parse(req.url)
       var p = parsed.pathname
       p = path.normalize(p)
       var collname = path.dirname(p)
