@@ -13,6 +13,7 @@
   var https = require('https')
   var path = require('path')
   var express = require('express')
+  var bodyParser = require('body-parser')
   var passport = require('passport')
   require('./Math.uuid')
 
@@ -153,11 +154,11 @@ passport.use(new BearerStrategy({ },
 */
 //  server = http.createServer(options, app)
 
-  app.use(express.logger({ format: ':method :url :status :response-time' }))
+//  app.use(express.logger({ format: ':method :url :status :response-time' }))
   app.use(express.query())
-  app.use(express.bodyParser())  
+  app.use(bodyParser())  
   app.use(passport.initialize())
-  app.use(app.router)
+//  app.use(app.router)
 
   app.get('/extensions',
    passport.authenticate('bearer', { session: false }),
